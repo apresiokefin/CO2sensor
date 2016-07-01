@@ -75,10 +75,11 @@ for i in xrange(len(lines)-1,-1,-1):	#start sorting from the latest data
 	ppm = data[1]
 	status = data[2]
 	sent = 0
-	if status != "U":
+	if status != "U\n":
 		sent = upload(timestamp, ppm)
 		if sent == 1:
 			lines[i]=lines[i].replace("W","U")
+
 f.seek(0)
 f.writelines(lines)
 f.close
