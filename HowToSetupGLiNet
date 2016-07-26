@@ -5,7 +5,7 @@ Hardware to prepare:
 -SIM800L Module
 -Alphasense NDIR CO2 Sensor including its transmission board
 -AEROCET 831 
--Internet source (smartphone tethering, lan connection
+-Internet source (smartphone tethering, lan connection)
 
 Basically, the flow of data follows:
 Sensor(s) --> USB port(s) --> GL.iNet --> Serial port --> SIM800L
@@ -23,13 +23,12 @@ sudo ssh root@192.168.1.1
 
 That address is the default address after fresh flashing of OpenWrt
 
-
 If internet connection has been established, we then install drivers using these command:
 opkg update
 opkg install kmod-usb-acm kmod-usb-core kmod-usb-ohci kmod-usb-serial kmod-usb-serial-cp210x
 opkg install kmod-usb-serial-ftdi kmod-usb-uhci kmod-usb2
 opkg install python-light python-pyserial
-opkg install screen #optional, useful for troubleshooting
+opkg install screen #optional, useful for troubleshooting#
 
 Some drivers (kmod-usb*) might be already installed.
 
@@ -45,3 +44,14 @@ Access to console should be terminated. So, add # to disable the command like th
 #ttyATH0access::askconsole:/bin/ash --login
 
 Now, power off the GL.iNet then power it on (avoid reboot command from ssh)
+
+GL.iNet has acquired softwares and drivers needed. Then transfer python script (CO2.py;PM.py) to GL.iNet. 
+In order to run these scripts following certain schedule, use Cron which is by default already installed in OpenWrt.
+We put the python scripts in /root, then edit Cron configuration using:
+crontab -e
+
+Add new line and fill it according to the time scheduling rule of Cron.
+For example, we assign CO2.py to run every 5 minutes, the new line will be:
+*/5 * * * * /usr/bin/python /root/CO2.py
+
+That is the end of this setup tutorial.
