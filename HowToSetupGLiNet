@@ -1,0 +1,47 @@
+This tutorial assumes that the GL.iNet used OpenWrt-Chaos Chalmers version.
+
+Hardware to prepare:
+-GL.iNet (we used GL.iNet 6416)
+-SIM800L Module
+-Alphasense NDIR CO2 Sensor including its transmission board
+-AEROCET 831 
+-Internet source (smartphone tethering, lan connection
+
+Basically, the flow of data follows:
+Sensor(s) --> USB port(s) --> GL.iNet --> Serial port --> SIM800L
+
+There is some steps needed in order to make that data flow works.
+Some things to notes are:
+1. OpenWrt is not naturally equipped with USB-serial drivers
+2. OpenWrt serial port by default is prepared to receive signal from outside
+3. Never command 'reboot' when ssh still connected, it causes the network port unaccessible
+4. We utilize python script to mine sensors' data 
+5. Driver/software packages are installed using internet
+
+We need to access GL.iNet using ssh. We use Linux(Ubuntu) to access GL.iNet, so from terminal:
+sudo ssh root@192.168.1.1
+
+That address is the default address after fresh flashing of OpenWrt
+
+
+If internet connection has been established, we then install drivers using these command:
+opkg update
+opkg install kmod-usb-acm kmod-usb-core kmod-usb-ohci kmod-usb-serial kmod-usb-serial-cp210x
+opkg install kmod-usb-serial-ftdi kmod-usb-uhci kmod-usb2
+opkg install python-light python-pyserial
+opkg install screen #optional, useful for troubleshooting
+
+Some drivers (kmod-usb*) might be already installed.
+
+Then we have to enable access of serial from inside GL.iNet. Configuration file /etc/inittab must be changed.
+Initially, inside the file are:
+::sysinit:/etc/init.d/rcS S boot
+::shutdown:/etc/init.d/rcS K shutdown
+::askconsole:/bin/ash --login
+
+Access to console should be terminated. So, add # to disable the command like this:
+::sysinit:/etc/init.d/rcS S boot
+::shutdown:/etc/init.d/rcS K shutdown
+#ttyATH0access::askconsole:/bin/ash --login
+
+Now, power off the GL.iNet then power it on (avoid reboot command from ssh)
