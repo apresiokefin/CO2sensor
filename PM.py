@@ -4,8 +4,7 @@ import serial
 import datetime
 import time
 
-CO2status = 1
-SIMstatus = 1
+PMstatus = 1
 key = 'HHQEW2LE696EWKJ6'
 
 #List ATcommand used for the process
@@ -91,11 +90,11 @@ def termgprs():
 	sdatcmd(8) #AT+SAPBR=0,1
 
 #function to upload data to Thingspeak using Sim800L
-def upload(timestamp, ppm):
+def upload(timestamp, pm1, pm25, pm4, pm10, tsp):
     while True:
 	
 	try: 
-		cmdupload="AT+HTTPPARA=\"URL\",\"http://api.thingspeak.com/update?api_key="+key+"&field1="+ppm+"&created_at="+timestamp+"&timezone=Asia/Jakarta\"\r"
+		cmdupload="AT+HTTPPARA=\"URL\",\"http://api.thingspeak.com/update?api_key="+key+"&field2="+pm1+"&field3="+pm25+"&field4="+pm4+"&field5="+pm10+"&field6="+tsp+"&created_at="+timestamp+"&timezone=Asia/Jakarta\"\r"
 		response = sdcmd(cmdupload)
 		if response.find("ERROR") >= 0:
 			print ("Upload failed!")
@@ -108,49 +107,72 @@ def upload(timestamp, ppm):
 		return sent
 	except:
 		print "HTTP Connection failed"
-		termgprs()
 		sent = 0
 		return sent
 		break
 	break
 
+#dictionary to convert month's name to number
+def month(x):
+	return {
+		'JAN': '01',
+		'FEB': '02',
+		'MAR': '03',
+		'APR': '04',
+		'MAY': '05',
+		'JUN': '06',
+		'JUL': '07',
+		'AUG': '08',
+		'SEP': '09',
+		'OCT': '10',
+		'NOV': '11',
+		'DEC': '12',
+	} [x]
+
 #check and define serial port for SIM800L
-if True:
-	try:	
-		simport = serial.Serial('/dev/ttyATH0',9600, timeout=3.0)
-		simportcheck = simport.isOpen()
-	except (serial.serialutil.SerialException,OSError), error:
-		SIMstatus = 0
-		print (error)
+try:	
+	simport = serial.Serial('/dev/ttyATH0',9600, timeout=3.0)
+	simportcheck = simport.isOpen()
+except (serial.serialutil.SerialException,OSError), error:
+	SIMstatus = 0
+	print (error)
 
-#check and define serial port for CO2 sensor
-if True:
-	try:	
-		port = serial.Serial('/dev/ttyUSB0',19200, timeout=3.0)
-		portcheck = port.isOpen()
-	except (serial.serialutil.SerialException,OSError), error:
-		CO2status = 0
-		print (error)	
+#check and define serial port for particulate sensor
+try:	
+	port = serial.Serial('/dev/ttyUSB0',38400, timeout=3.0)
+	portcheck = port.isOpen()
+except (serial.serialutil.SerialException,OSError), error:
+	PMstatus = 0
+	print (error)	
 
-#input for the sensor N = concentration in ppm;
-#T = temperature in centigrade; V = lamp voltage in 10mV
-#begin sampling data from CO2 sensor
-if CO2status != 0:
-	port.write("\rN\r")		#need to enter new line due to it . . .
-	time.sleep(5)			# . . .does not read the first output
-	ppm = port.readline()		#reading the output
+#input for the sensor S = start sampling data;
+#begin sampling data from particulate sensor
+if PMstatus != 0:
+	port.write("\r")
+	time.sleep(5)
+	port.write("S\r")
+	time.sleep(5)
+	response=rdln(port)
+	if response.find("Start") >= 0:
+		time.sleep(65)		
+		data = port.readline()		#reading the output
+	data = data.lstrip().rstrip()	#clean delimiter
+	data = data.split(",")
+	timestamp = data[0].split(" ")
+	date = timestamp[0].split("/")
+	time = timestamp[1]
 
-	ppm = ppm.rstrip().lstrip()	#clean delimiter
+	dd = date[0]
+	mm = month(date[1])
+	yyyy = date[2]
+	timestamp = yyyy+"-"+mm+"-"+dd+"T"+time
 
-#pick the timestamp when the measurement held
-	timestamp = datetime.datetime.now().strftime("%Y-%m-%dT%H:%M:%S")
-
-	f = open('dataCO2.csv','a')
-
+	f = open('dataPM.csv','a')
 #writing data to file, 
+#data format from sensor = Time,Loc,PM1,PM2.5,PM4,PM10,TSP,Status
 #W = data written in file, not uploaded
 #U = data uploaded to thingspeak
-	f.write(timestamp+","+ppm+",W\n")
+	f.write(timestamp+","+data[2]+","+data[3]+","+data[4]+","+data[5]+","+data[6]+",W\n")
 
 	f.close
 else:
@@ -164,21 +186,18 @@ else:
 
 #read and collect data from file
 if SIMstatus != 0:
-	f = file('dataCO2.csv','r+b')
+	f = open('dataPM.csv','rw+')
 	lines = f.readlines()
 	for i in xrange(len(lines)-1,-1,-1):	#start sorting from the latest data
 		data = lines[i]
 		data = data.split(",")
 		timestamp = data[0]
-		ppm = data[1]
-		status = data[2]
+		status = data[6]
 		sent = 0
 		if status != "U\n":
-			sent = upload(timestamp, ppm)
+			sent = upload(timestamp, data[1], data[2], data[3], data[4], data[5])
 			if sent == 1:
 				lines[i]=lines[i].replace("W","U")
-			else:
-				break
 
 	f.seek(0)
 	f.writelines(lines)
