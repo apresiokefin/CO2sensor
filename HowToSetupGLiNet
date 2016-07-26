@@ -52,6 +52,7 @@ crontab -e
 
 Add new line and fill it according to the time scheduling rule of Cron.
 For example, we assign CO2.py to run every 5 minutes, the new line will be:
-*/5 * * * * /usr/bin/python /root/CO2.py
+*/5 * * * * /usr/bin/python /root/CO2.py > /root/logCO2.log
 
+The output of the program will be saved in log file (logCO2.log).
 That is the end of this setup tutorial.
