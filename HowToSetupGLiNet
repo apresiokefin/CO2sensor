@@ -56,3 +56,8 @@ For example, we assign CO2.py to run every 5 minutes, the new line will be:
 
 The output of the program will be saved in log file (logCO2.log).
 That is the end of this setup tutorial.
+
+Mistakes I have made:
+-Do not use 'time' as variable because we its library in order to count time
+-Make sure all hardwares have been set up well
+-Everytime using SSH, always do proper exit
